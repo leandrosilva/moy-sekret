@@ -26,7 +26,6 @@ where
 #[allow(dead_code)]
 fn before_test() {
     remove_keys_dir();
-    create_keys_dir();
 }
 
 #[allow(dead_code)]
@@ -34,6 +33,7 @@ fn after_test() {
     remove_keys_dir();
 }
 
+#[allow(dead_code)]
 fn create_keys_dir() {
     let keys_dir = Path::new(F_KEYS_DIR);
     match fs::create_dir_all(keys_dir) {
