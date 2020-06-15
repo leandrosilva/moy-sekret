@@ -101,7 +101,7 @@ fn should_not_create_keypair_due_to_permission_denied_on_keys_directory() {
             Ok(_) => assert!(false, "Should not create key pair"),
             Err(e) => {
                 assert_eq!(
-                    "Could not save pk file: Failed to create keys' directory: Permission denied (os error 13)",
+                    "Could not create keys dir: Failed to create keys' directory: Permission denied (os error 13)",
                     e.to_string()
                 );
                 assert!(

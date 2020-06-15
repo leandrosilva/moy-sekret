@@ -36,8 +36,7 @@ impl AnyError {
     }
 }
 
-impl Error for AnyError {
-}
+impl Error for AnyError {}
 
 impl fmt::Display for AnyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -49,13 +48,21 @@ impl fmt::Display for AnyError {
 }
 
 pub fn error<T, U: 'static + Error>(message: &str, reason: U) -> Result<T, AnyError> {
-    return Err(AnyError::new(&message, Some(Box::new(reason))))
+    return Err(AnyError::new(&message, Some(Box::new(reason))));
 }
 
 // Business functions
 //
 
-pub fn create_keypair(keys_dir: &String, user: &String) -> Result<(PublicKey, SecretKey), AnyError> {
+pub fn create_keypair(
+    keys_dir: &String,
+    user: &String,
+) -> Result<(PublicKey, SecretKey), AnyError> {
+    match create_keys_dir_if_not_exists(&keys_dir) {
+        Ok(_) => (),
+        Err(reason) => return error("Could not create keys dir", reason),
+    };
+
     let (pk, sk) = box_::gen_keypair();
 
     let pk_file_path = format!("{}/{}.pk", keys_dir, user);
@@ -73,14 +80,20 @@ pub fn create_keypair(keys_dir: &String, user: &String) -> Result<(PublicKey, Se
     return Ok((pk, sk));
 }
 
-fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
-    let key_file_path = Path::new(output_file_path.as_str());
+fn create_keys_dir_if_not_exists(keys_dir: &String) -> Result<(), AnyError> {
+    let path = Path::new(keys_dir);
+    if path.is_dir() {
+        return Ok(());
+    }
 
-    match fs::create_dir_all(key_file_path.parent().unwrap()) {
-        Ok(_) => (),
+    match fs::create_dir_all(path) {
+        Ok(_) => return Ok(()),
         Err(reason) => return error("Failed to create keys' directory", reason),
     };
+}
 
+fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
+    let key_file_path = Path::new(output_file_path.as_str());
     let mut key_file = match File::create(key_file_path) {
         Ok(file) => file,
         Err(reason) => return error("Could not create key file", reason),
