@@ -53,11 +53,11 @@ fn remove_keys_dir() {
 fn check_key_file_exists(keys_dir: &String, user: &String, key: &str) -> bool {
     let file_path = format!("{}/{}.{}", keys_dir, user, key);
     let file = Path::new(file_path.as_str());
-    return file.is_file();
+    file.is_file()
 }
 
 fn check_key_file_not_exists(keys_dir: &String, user: &String, key: &str) -> bool {
-    return !check_key_file_exists(keys_dir, user, key);
+    !check_key_file_exists(keys_dir, user, key)
 }
 
 // Tests
