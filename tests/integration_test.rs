@@ -1,4 +1,4 @@
-use moy_sekret::create_keypair;
+use moy_sekret::{init};
 use std::fs;
 use std::panic;
 use std::path::Path;
@@ -64,12 +64,12 @@ fn check_key_file_not_exists(keys_dir: &String, user: &String, key: &str) -> boo
 //
 
 #[test]
-fn should_create_keypair_for_user_and_save_them_to_a_given_directory() {
+fn should_init_for_user_and_save_them_to_a_given_directory() {
     run_test(|| {
         let keys_dir = F_KEYS_DIR.to_string();
         let user = F_USER.to_string();
 
-        match create_keypair(&keys_dir, &user) {
+        match init(&keys_dir, &user) {
             Ok(_) => {
                 assert!(
                     check_key_file_exists(&keys_dir, &user, "pk"),
@@ -86,7 +86,7 @@ fn should_create_keypair_for_user_and_save_them_to_a_given_directory() {
 }
 
 #[test]
-fn should_not_create_keypair_due_to_permission_denied_on_keys_directory() {
+fn should_not_init_due_to_permission_denied_on_keys_directory() {
     // Have to find out how to test it on Windows but not now
     if cfg!(windows) {
         assert!(true);
@@ -97,11 +97,11 @@ fn should_not_create_keypair_due_to_permission_denied_on_keys_directory() {
         let keys_dir = String::from("/keys");
         let user = F_USER.to_string();
 
-        match create_keypair(&keys_dir, &user) {
+        match init(&keys_dir, &user) {
             Ok(_) => assert!(false, "Should not create key pair"),
             Err(e) => {
                 assert_eq!(
-                    "Could not create keys dir: Failed to create keys' directory: Permission denied (os error 13)",
+                    "Initialization failed: Could not create keys dir: Failed to create keys' directory: Permission denied (os error 13)",
                     e.to_string()
                 );
                 assert!(

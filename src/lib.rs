@@ -19,19 +19,18 @@ type OptError = Option<DynError>;
 #[derive(Debug)]
 pub struct AnyError {
     pub details: String,
-    pub reason: OptError,
+    pub parent: OptError,
 }
 
 impl AnyError {
     fn new(details: &str, reason: OptError) -> AnyError {
         AnyError {
             details: details.to_string(),
-            reason: reason,
+            parent: reason,
         }
     }
 
-    #[allow(dead_code)]
-    fn without_cause(details: &str) -> AnyError {
+    fn without_parent(details: &str) -> AnyError {
         AnyError::new(details, None)
     }
 }
@@ -40,7 +39,7 @@ impl Error for AnyError {}
 
 impl fmt::Display for AnyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.reason {
+        match &self.parent {
             Some(c) => write!(f, "{}: {}", self.details, c),
             None => write!(f, "{}", self.details),
         }
@@ -48,13 +47,35 @@ impl fmt::Display for AnyError {
 }
 
 pub fn error<T, U: 'static + Error>(message: &str, reason: U) -> Result<T, AnyError> {
-    return Err(AnyError::new(&message, Some(Box::new(reason))));
+    Err(AnyError::new(&message, Some(Box::new(reason))))
+}
+
+pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
+    Err(AnyError::without_parent(&message))
+}
+
+// Entrypoint functions
+//
+
+pub fn init(keys_dir: &String, user: &String) -> Result<(), AnyError> {
+    match create_keypair(&keys_dir, &user) {
+        Ok(_) => Ok(()),
+        Err(reason) => error("Initialization failed", reason),
+    }
+}
+
+pub fn encrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyError> {
+    error_without_parent("Not implemented yet")
+}
+
+pub fn decrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyError> {
+    error_without_parent("Not implemented yet")
 }
 
 // Business functions
 //
 
-pub fn create_keypair(
+fn create_keypair(
     keys_dir: &String,
     user: &String,
 ) -> Result<(PublicKey, SecretKey), AnyError> {
@@ -68,16 +89,16 @@ pub fn create_keypair(
     let pk_file_path = format!("{}/{}.pk", keys_dir, user);
     match save_key(pk.as_ref(), &pk_file_path) {
         Ok(_) => (),
-        Err(reason) => return error("Could not save pk file", reason),
+        Err(reason) => return error("Could not save public key file", reason),
     };
 
     let sk_file_path = format!("{}/{}.sk", keys_dir, user);
     match save_key(sk.as_ref(), &sk_file_path) {
         Ok(_) => (),
-        Err(reason) => return error("Could not save secret file: {}", reason),
+        Err(reason) => return error("Could not save secret key file", reason),
     };
 
-    return Ok((pk, sk));
+    Ok((pk, sk))
 }
 
 fn create_keys_dir_if_not_exists(keys_dir: &String) -> Result<(), AnyError> {
@@ -87,9 +108,9 @@ fn create_keys_dir_if_not_exists(keys_dir: &String) -> Result<(), AnyError> {
     }
 
     match fs::create_dir_all(path) {
-        Ok(_) => return Ok(()),
-        Err(reason) => return error("Failed to create keys' directory", reason),
-    };
+        Ok(_) => Ok(()),
+        Err(reason) => error("Failed to create keys' directory", reason),
+    }
 }
 
 fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
@@ -103,10 +124,10 @@ fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
 
     match key_file.write_all(key_file_base64.as_bytes()) {
         Ok(_) => (),
-        Err(reason) => return error("Could not create key file", reason),
+        Err(reason) => return error("Could not write key file", reason),
     };
 
-    return Ok(());
+    Ok(())
 }
 
 // Helper functions
