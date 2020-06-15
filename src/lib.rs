@@ -103,3 +103,9 @@ pub fn exit_with_error(message: &str, reason: AnyError) {
     eprintln!("{}: {}", message, reason);
     process::exit(666);
 }
+
+// Unit tests
+//
+
+#[cfg(test)]
+mod unit_test;
