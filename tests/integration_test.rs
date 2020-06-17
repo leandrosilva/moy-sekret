@@ -6,7 +6,7 @@ use std::path::Path;
 // Fixtures
 //
 
-const F_KEYS_DIR: &str = "./test_keys";
+const F_STORAGE_DIR: &str = "./test_storage";
 const F_PROFILE: &str = "tester";
 const F_OVERRIDE_PROFILE: bool = false;
 
@@ -26,29 +26,29 @@ where
 
 #[allow(dead_code)]
 fn before_test() {
-    remove_keys_dir();
+    remove_storage_dir();
 }
 
 #[allow(dead_code)]
 fn after_test() {
-    remove_keys_dir();
+    remove_storage_dir();
 }
 
 #[allow(dead_code)]
-fn create_keys_dir() {
-    let keys_dir = Path::new(F_KEYS_DIR);
-    match fs::create_dir_all(keys_dir) {
+fn create_storage_dir() {
+    let storage_dir = Path::new(F_STORAGE_DIR);
+    match fs::create_dir_all(storage_dir) {
         Ok(_) => (),
         Err(reason) => assert!(
             false,
-            format!("Failed to create test keys directory: {}", reason)
+            format!("Failed to create test storage directory: {}", reason)
         ),
     }
 }
 
-fn remove_keys_dir() {
-    let keys_dir = Path::new(F_KEYS_DIR);
-    let _ = fs::remove_dir_all(keys_dir);
+fn remove_storage_dir() {
+    let storage_dir = Path::new(F_STORAGE_DIR);
+    let _ = fs::remove_dir_all(storage_dir);
 }
 
 // Tests
@@ -57,17 +57,17 @@ fn remove_keys_dir() {
 #[test]
 fn should_init_a_profile_and_save_them_to_a_given_directory() {
     run_test(|| {
-        let keys_dir = F_KEYS_DIR.to_string();
+        let storage_dir = F_STORAGE_DIR.to_string();
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile, F_OVERRIDE_PROFILE) {
-            Ok(_) => match profile_exists(&keys_dir, &profile) {
+        match init(&storage_dir, &profile, F_OVERRIDE_PROFILE) {
+            Ok(_) => match profile_exists(&storage_dir, &profile) {
                 Ok(_) => assert!(true),
                 Err(reason) => assert!(
                     false,
                     format!(
                         "Should exist profile {} in {} directory but: {}",
-                        &profile, &keys_dir, reason
+                        &profile, &storage_dir, reason
                     )
                 ),
             },
@@ -77,7 +77,7 @@ fn should_init_a_profile_and_save_them_to_a_given_directory() {
 }
 
 #[test]
-fn should_not_init_due_to_permission_denied_on_keys_directory() {
+fn should_not_init_due_to_permission_denied_on_storage_directory() {
     // Have to find out how to test it on Windows but not now
     if cfg!(windows) {
         assert!(true);
@@ -85,22 +85,22 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
     }
 
     run_test(|| {
-        let keys_dir = String::from("/keys");
+        let storage_dir = String::from("/storage");
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile, F_OVERRIDE_PROFILE) {
+        match init(&storage_dir, &profile, F_OVERRIDE_PROFILE) {
             Ok(_) => assert!(false, "Should have not initiated"),
             Err(reason) => {
                 assert_eq!(
-                    "Initialization failed while creating key pair: Could not create keys directory: Failed to create keys directory: Permission denied (os error 13)",
+                    "Initialization failed while creating storage for files: Could not create storage directory: Permission denied (os error 13)",
                     reason.to_string()
                 );
-                match profile_exists(&keys_dir, &profile) {
+                match profile_exists(&storage_dir, &profile) {
                     Ok(_) => assert!(
                         false,
                         format!(
                             "Should not exist profile {} in {} directory",
-                            &profile, &keys_dir
+                            &profile, &storage_dir
                         )
                     ),
                     Err(_) => assert!(true),
@@ -113,13 +113,13 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
 #[test]
 fn should_init_when_profile_exists_and_override_flag_is_present() {
     run_test(|| {
-        let keys_dir = F_KEYS_DIR.to_string();
+        let storage_dir = F_STORAGE_DIR.to_string();
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile, F_OVERRIDE_PROFILE) {
+        match init(&storage_dir, &profile, F_OVERRIDE_PROFILE) {
             Ok(_) => {
                 let flag_override_profile = true;
-                match init(&keys_dir, &profile, flag_override_profile) {
+                match init(&storage_dir, &profile, flag_override_profile) {
                     Ok(_) => assert!(true),
                     Err(reason) => assert_eq!("Should have initiated and overridden existent profile but:", reason.to_string()),
                 }
@@ -132,13 +132,13 @@ fn should_init_when_profile_exists_and_override_flag_is_present() {
 #[test]
 fn should_not_init_when_profile_exists_and_override_flag_is_not_present() {
     run_test(|| {
-        let keys_dir = F_KEYS_DIR.to_string();
+        let storage_dir = F_STORAGE_DIR.to_string();
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile, F_OVERRIDE_PROFILE) {
+        match init(&storage_dir, &profile, F_OVERRIDE_PROFILE) {
             Ok(_) => {
                 let flag_override_profile = false;
-                match init(&keys_dir, &profile, flag_override_profile) {
+                match init(&storage_dir, &profile, flag_override_profile) {
                     Ok(_) => assert!(
                         false,
                         "Should not initialize an existent profile when override flag is not present"

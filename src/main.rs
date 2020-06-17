@@ -7,7 +7,7 @@ use moy_sekret::{decrypt, encrypt, exit_with_error, init, AnyError};
 fn main() {
     let profile_arg = Arg::with_name("profile")
         .about("name of the profile")
-        .short('u')
+        .short('p')
         .long("profile")
         .takes_value(true)
         .value_name("PROFILE")
@@ -24,7 +24,7 @@ fn main() {
                 )
                 .arg(
                     Arg::with_name("dir")
-                        .about("directory where to place keys and encrypted files")
+                        .about("directory where to store keys and encrypted files")
                         .short('d')
                         .long("dir")
                         .takes_value(true)
@@ -95,12 +95,12 @@ fn main() {
     let matches = app.get_matches_mut();
     match matches.subcommand() {
         ("init", Some(init_matches)) => {
-            let keys_dir = init_matches.value_of("dir").unwrap().to_owned();
+            let storage_dir = init_matches.value_of("dir").unwrap().to_owned();
             let profile = init_matches.value_of("profile").unwrap().to_owned();
             let should_override = init_matches.is_present("override");
 
-            match init(&keys_dir, &profile, should_override) {
-                Ok(()) => println!("Key pair created with success at {} directory", &keys_dir),
+            match init(&storage_dir, &profile, should_override) {
+                Ok(()) => println!("Key pair created with success at {} directory", &storage_dir),
                 Err(reason) => generic_exit_with_error(reason),
             }
         }
