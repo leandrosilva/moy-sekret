@@ -5,21 +5,22 @@ use moy_sekret::{decrypt, encrypt, exit_with_error, init};
 //
 
 fn main() {
+    let profile_arg = Arg::with_name("profile")
+        .about("name of the profile")
+        .short('u')
+        .long("profile")
+        .takes_value(true)
+        .value_name("PROFILE")
+        .required(true);
     let mut app = App::new("Moy Sekret")
         .version("1.0")
         .author("Leandro Silva <leandrodoze@gmail.com>")
         .about("You know, that is kind of... secret.")
         .subcommand(
             App::new("init")
-                .about("Initializes the app for a give user.")
+                .about("Initializes the app for a give profile.")
                 .arg(
-                    Arg::with_name("user")
-                        .about("name of the user whose profile aims for")
-                        .short('u')
-                        .long("user")
-                        .takes_value(true)
-                        .value_name("USER")
-                        .required(true),
+                    &profile_arg,
                 )
                 .arg(
                     Arg::with_name("dir")
@@ -41,6 +42,9 @@ fn main() {
             App::new("encrypt")
                 .about("Encrypts a file, saves it to the repository directory and deletes the original one.")
                 .arg(
+                    &profile_arg,
+                )
+                .arg(
                     Arg::with_name("file")
                         .about("path to the file to be encrypted")
                         .short('f')
@@ -58,7 +62,10 @@ fn main() {
         )
         .subcommand(
             App::new("decrypt")
-                .about("Decrypts a file, saves it plain to the current directory but keeps the encrypted one.")
+                .about("Decrypts a file, saves it plain to given directory but keeps the encrypted one.")
+                .arg(
+                    &profile_arg,
+                )
                 .arg(
                     Arg::with_name("file")
                         .about("name of the encrypted file")
@@ -67,6 +74,15 @@ fn main() {
                         .takes_value(true)
                         .value_name("FILE")
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name("dest")
+                        .about("directory to where save the decrypted file")
+                        .short('d')
+                        .long("dest")
+                        .takes_value(true)
+                        .value_name("DEST")
+                        .default_value(".")
                 )
                 .arg(
                     Arg::with_name("override")
@@ -80,9 +96,9 @@ fn main() {
     match matches.subcommand() {
         ("init", Some(init_matches)) => {
             let keys_dir = init_matches.value_of("dir").unwrap().to_owned();
-            let user = init_matches.value_of("user").unwrap().to_owned();
+            let profile = init_matches.value_of("profile").unwrap().to_owned();
 
-            match init(&keys_dir, &user) {
+            match init(&keys_dir, &profile) {
                 Ok(()) => println!("Key pair created with success at {} directory", &keys_dir),
                 Err(reason) => exit_with_error("Something went really bad here", reason),
             }

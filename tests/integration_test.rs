@@ -7,7 +7,7 @@ use std::path::Path;
 //
 
 const F_KEYS_DIR: &str = "test_keys";
-const F_USER: &str = "tester";
+const F_PROFILE: &str = "tester";
 
 // Helpers
 //
@@ -50,34 +50,34 @@ fn remove_keys_dir() {
     let _ = fs::remove_dir_all(keys_dir);
 }
 
-fn check_key_file_exists(keys_dir: &String, user: &String, key: &str) -> bool {
-    let file_path = format!("{}/{}.{}", keys_dir, user, key);
+fn check_key_file_exists(keys_dir: &String, profile: &String, key: &str) -> bool {
+    let file_path = format!("{}/{}.{}", keys_dir, profile, key);
     let file = Path::new(file_path.as_str());
     file.is_file()
 }
 
-fn check_key_file_not_exists(keys_dir: &String, user: &String, key: &str) -> bool {
-    !check_key_file_exists(keys_dir, user, key)
+fn check_key_file_not_exists(keys_dir: &String, profile: &String, key: &str) -> bool {
+    !check_key_file_exists(keys_dir, profile, key)
 }
 
 // Tests
 //
 
 #[test]
-fn should_init_for_user_and_save_them_to_a_given_directory() {
+fn should_init_for_profile_and_save_them_to_a_given_directory() {
     run_test(|| {
         let keys_dir = F_KEYS_DIR.to_string();
-        let user = F_USER.to_string();
+        let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &user) {
+        match init(&keys_dir, &profile) {
             Ok(_) => {
                 assert!(
-                    check_key_file_exists(&keys_dir, &user, "pk"),
-                    format!("Should exist a {}.pk file in {} dir", &user, &keys_dir)
+                    check_key_file_exists(&keys_dir, &profile, "pk"),
+                    format!("Should exist a {}.pk file in {} dir", &profile, &keys_dir)
                 );
                 assert!(
-                    check_key_file_exists(&keys_dir, &user, "sk"),
-                    format!("Should exist a {}.sk file in {} dir", &user, &keys_dir)
+                    check_key_file_exists(&keys_dir, &profile, "sk"),
+                    format!("Should exist a {}.sk file in {} dir", &profile, &keys_dir)
                 );
             }
             Err(e) => assert!(false, format!("Should have created but: {}", e)),
@@ -95,9 +95,9 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
 
     run_test(|| {
         let keys_dir = String::from("/keys");
-        let user = F_USER.to_string();
+        let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &user) {
+        match init(&keys_dir, &profile) {
             Ok(_) => assert!(false, "Should not create key pair"),
             Err(e) => {
                 assert_eq!(
@@ -105,12 +105,12 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
                     e.to_string()
                 );
                 assert!(
-                    check_key_file_not_exists(&keys_dir, &user, "pk"),
-                    format!("Should not exist a {}.pk file in {} dir", &user, &keys_dir)
+                    check_key_file_not_exists(&keys_dir, &profile, "pk"),
+                    format!("Should not exist a {}.pk file in {} dir", &profile, &keys_dir)
                 );
                 assert!(
-                    check_key_file_not_exists(&keys_dir, &user, "sk"),
-                    format!("Should not exist a {}.sk file in {} dir", &user, &keys_dir)
+                    check_key_file_not_exists(&keys_dir, &profile, "sk"),
+                    format!("Should not exist a {}.sk file in {} dir", &profile, &keys_dir)
                 );
             }
         }

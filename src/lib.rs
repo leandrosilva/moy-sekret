@@ -57,8 +57,8 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 // Entrypoint functions
 //
 
-pub fn init(keys_dir: &String, user: &String) -> Result<(), AnyError> {
-    match create_keypair(&keys_dir, &user) {
+pub fn init(keys_dir: &String, profile: &String) -> Result<(), AnyError> {
+    match create_keypair(&keys_dir, &profile) {
         Ok(_) => Ok(()),
         Err(reason) => error("Initialization failed", reason),
     }
@@ -77,7 +77,7 @@ pub fn decrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyErr
 
 fn create_keypair(
     keys_dir: &String,
-    user: &String,
+    profile: &String,
 ) -> Result<(PublicKey, SecretKey), AnyError> {
     match create_keys_dir_if_not_exists(&keys_dir) {
         Ok(_) => (),
@@ -86,13 +86,13 @@ fn create_keypair(
 
     let (pk, sk) = box_::gen_keypair();
 
-    let pk_file_path = format!("{}/{}.pk", keys_dir, user);
+    let pk_file_path = format!("{}/{}.pk", keys_dir, profile);
     match save_key(pk.as_ref(), &pk_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save public key file", reason),
     };
 
-    let sk_file_path = format!("{}/{}.sk", keys_dir, user);
+    let sk_file_path = format!("{}/{}.sk", keys_dir, profile);
     match save_key(sk.as_ref(), &sk_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save secret key file", reason),
