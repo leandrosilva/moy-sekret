@@ -97,8 +97,9 @@ fn main() {
         ("init", Some(init_matches)) => {
             let keys_dir = init_matches.value_of("dir").unwrap().to_owned();
             let profile = init_matches.value_of("profile").unwrap().to_owned();
+            let should_override = init_matches.is_present("override");
 
-            match init(&keys_dir, &profile) {
+            match init(&keys_dir, &profile, should_override) {
                 Ok(()) => println!("Key pair created with success at {} directory", &keys_dir),
                 Err(reason) => generic_exit_with_error(reason),
             }

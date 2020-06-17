@@ -1,4 +1,4 @@
-use moy_sekret::{init};
+use moy_sekret::{init, profile_exists};
 use std::fs;
 use std::panic;
 use std::path::Path;
@@ -50,36 +50,25 @@ fn remove_keys_dir() {
     let _ = fs::remove_dir_all(keys_dir);
 }
 
-fn check_key_file_exists(keys_dir: &String, profile: &String, key: &str) -> bool {
-    let file_path = format!("{}/{}.{}", keys_dir, profile, key);
-    let file = Path::new(file_path.as_str());
-    file.is_file()
-}
-
-fn check_key_file_not_exists(keys_dir: &String, profile: &String, key: &str) -> bool {
-    !check_key_file_exists(keys_dir, profile, key)
-}
-
 // Tests
 //
 
 #[test]
-fn should_init_for_profile_and_save_them_to_a_given_directory() {
+fn should_init_a_profile_and_save_them_to_a_given_directory() {
     run_test(|| {
         let keys_dir = F_KEYS_DIR.to_string();
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile) {
+        match init(&keys_dir, &profile, false) {
             Ok(_) => {
-                assert!(
-                    check_key_file_exists(&keys_dir, &profile, "pk"),
-                    format!("Should exist a {}.pk file in {} dir", &profile, &keys_dir)
-                );
-                assert!(
-                    check_key_file_exists(&keys_dir, &profile, "sk"),
-                    format!("Should exist a {}.sk file in {} dir", &profile, &keys_dir)
-                );
+                match profile_exists(&keys_dir, &profile) {
+                Ok(_) => assert!(true),
+                Err(reason) => assert!(
+                    false,
+                    format!("Should exist a key pair for {} in {} dir but: {}", &profile, &keys_dir, reason)
+                )
             }
+            },
             Err(e) => assert!(false, format!("Should have created but: {}", e)),
         }
     })
@@ -97,21 +86,20 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
         let keys_dir = String::from("/keys");
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile) {
+        match init(&keys_dir, &profile, false) {
             Ok(_) => assert!(false, "Should not create key pair"),
             Err(e) => {
                 assert_eq!(
                     "Initialization failed: Could not create keys dir: Failed to create keys' directory: Permission denied (os error 13)",
                     e.to_string()
                 );
-                assert!(
-                    check_key_file_not_exists(&keys_dir, &profile, "pk"),
-                    format!("Should not exist a {}.pk file in {} dir", &profile, &keys_dir)
-                );
-                assert!(
-                    check_key_file_not_exists(&keys_dir, &profile, "sk"),
-                    format!("Should not exist a {}.sk file in {} dir", &profile, &keys_dir)
-                );
+                match profile_exists(&keys_dir, &profile) {
+                    Ok(_) => assert!(
+                        false,
+                        format!("Should not exist any key file for {} in {} dir", &profile, &keys_dir)
+                    ),
+                    Err(_) => assert!(true),
+                };
             }
         }
     })

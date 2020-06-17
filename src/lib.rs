@@ -10,6 +10,23 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::process;
 
+// Custom types
+//
+
+pub enum CryptoKey {
+    PublicKey,
+    SecretKey,
+}
+
+impl fmt::Display for CryptoKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            CryptoKey::PublicKey => write!(f, "pk"),
+            CryptoKey::SecretKey => write!(f, "sk"),
+        }
+    }
+}
+
 // Custom error types
 //
 
@@ -57,7 +74,7 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 // Entrypoint functions
 //
 
-pub fn init(keys_dir: &String, profile: &String) -> Result<(), AnyError> {
+pub fn init(keys_dir: &String, profile: &String, should_override: bool) -> Result<(), AnyError> {
     match create_keypair(&keys_dir, &profile) {
         Ok(_) => Ok(()),
         Err(reason) => error("Initialization failed", reason),
@@ -75,10 +92,24 @@ pub fn decrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyErr
 // Business functions
 //
 
-fn create_keypair(
-    keys_dir: &String,
-    profile: &String,
-) -> Result<(PublicKey, SecretKey), AnyError> {
+pub fn profile_exists(keys_dir: &String, profile: &String) -> Result<(), AnyError> {
+    if !profile_file_exists(keys_dir, profile) {
+        return error_without_parent("Profile file does not exist")
+    }
+    keypair_exists(keys_dir, profile)
+}
+
+pub fn keypair_exists(keys_dir: &String, profile: &String) -> Result<(), AnyError> {
+    if !key_file_exists(keys_dir, profile, CryptoKey::PublicKey) {
+        return error_without_parent("Public key file does not exist")
+    }
+    if !key_file_exists(keys_dir, profile, CryptoKey::SecretKey) {
+        return error_without_parent("Secret key file does not exist")
+    }
+    Ok(())
+}
+
+fn create_keypair(keys_dir: &String, profile: &String) -> Result<(PublicKey, SecretKey), AnyError> {
     match create_keys_dir_if_not_exists(&keys_dir) {
         Ok(_) => (),
         Err(reason) => return error("Could not create keys dir", reason),
@@ -128,6 +159,16 @@ fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
     };
 
     Ok(())
+}
+
+fn profile_file_exists(_keys_dir: &String, _profile: &String) -> bool {
+    true
+}
+
+fn key_file_exists(keys_dir: &String, profile: &String, key: CryptoKey) -> bool {
+    let file_path = format!("{}/{}.{}", keys_dir, profile, key);
+    let file = Path::new(file_path.as_str());
+    file.is_file()
 }
 
 // Helper functions

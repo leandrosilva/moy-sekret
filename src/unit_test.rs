@@ -1,4 +1,5 @@
 mod tests {
+    #[allow(unused_imports)]
     use crate::*;
 
     #[test]
