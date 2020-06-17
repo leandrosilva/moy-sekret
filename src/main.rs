@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use moy_sekret::{decrypt, encrypt, exit_with_error, init};
+use moy_sekret::{decrypt, encrypt, exit_with_error, init, AnyError};
 
 // Main
 //
@@ -33,7 +33,7 @@ fn main() {
                 )
                 .arg(
                     Arg::with_name("override")
-                        .about("Should it override existing uer profile or not")
+                        .about("Should it override existing profile or not")
                         .short('o')
                         .long("override"),
                 ),
@@ -100,7 +100,7 @@ fn main() {
 
             match init(&keys_dir, &profile) {
                 Ok(()) => println!("Key pair created with success at {} directory", &keys_dir),
-                Err(reason) => exit_with_error("Something went really bad here", reason),
+                Err(reason) => generic_exit_with_error(reason),
             }
         }
         ("encrypt", Some(encrypt_matches)) => {
@@ -109,7 +109,7 @@ fn main() {
 
             match encrypt(&file_path, should_override) {
                 Ok(()) => println!("Encryption succesfully done"),
-                Err(reason) => exit_with_error("Something went really bad here", reason),
+                Err(reason) => generic_exit_with_error(reason),
             }
         }
         ("decrypt", Some(decrypt_matches)) => {
@@ -118,10 +118,15 @@ fn main() {
 
             match decrypt(&file_path, should_override) {
                 Ok(()) => println!("Decryption succesfully done"),
-                Err(reason) => exit_with_error("Something went really bad here", reason),
+                Err(reason) => generic_exit_with_error(reason),
             }
         }
         ("", None) => app.print_help().unwrap(),
         _ => unreachable!(),
     }
+}
+
+fn generic_exit_with_error(reason: AnyError) {
+    // Should give it a real better implementation any time soon
+    exit_with_error("Something went really bad here", reason);
 }
