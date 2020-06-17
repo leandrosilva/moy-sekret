@@ -6,7 +6,7 @@ use std::path::Path;
 // Fixtures
 //
 
-const F_KEYS_DIR: &str = "test_keys";
+const F_KEYS_DIR: &str = "./test_keys";
 const F_PROFILE: &str = "tester";
 
 // Helpers
@@ -59,7 +59,7 @@ fn should_init_a_profile_and_save_them_to_a_given_directory() {
         let keys_dir = F_KEYS_DIR.to_string();
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile, false) {
+        match init(&keys_dir, &profile, true) {
             Ok(_) => {
                 match profile_exists(&keys_dir, &profile) {
                 Ok(_) => assert!(true),
@@ -86,11 +86,11 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
         let keys_dir = String::from("/keys");
         let profile = F_PROFILE.to_string();
 
-        match init(&keys_dir, &profile, false) {
+        match init(&keys_dir, &profile, true) {
             Ok(_) => assert!(false, "Should not create key pair"),
             Err(e) => {
                 assert_eq!(
-                    "Initialization failed: Could not create keys dir: Failed to create keys' directory: Permission denied (os error 13)",
+                    "Initialization failed while creating key pair: Could not create keys directory: Failed to create keys' directory: Permission denied (os error 13)",
                     e.to_string()
                 );
                 match profile_exists(&keys_dir, &profile) {

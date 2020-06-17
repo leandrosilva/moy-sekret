@@ -75,9 +75,14 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 //
 
 pub fn init(keys_dir: &String, profile: &String, should_override: bool) -> Result<(), AnyError> {
+    if !should_override {
+        if let Ok(()) = profile_exists(keys_dir, profile) {
+            return error_without_parent("Initialization failed because profile already exists");
+        }
+    }
     match create_keypair(&keys_dir, &profile) {
         Ok(_) => Ok(()),
-        Err(reason) => error("Initialization failed", reason),
+        Err(reason) => error("Initialization failed while creating key pair", reason),
     }
 }
 
@@ -94,17 +99,17 @@ pub fn decrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyErr
 
 pub fn profile_exists(keys_dir: &String, profile: &String) -> Result<(), AnyError> {
     if !profile_file_exists(keys_dir, profile) {
-        return error_without_parent("Profile file does not exist")
+        return error_without_parent("Profile file does not exist");
     }
     keypair_exists(keys_dir, profile)
 }
 
 pub fn keypair_exists(keys_dir: &String, profile: &String) -> Result<(), AnyError> {
     if !key_file_exists(keys_dir, profile, CryptoKey::PublicKey) {
-        return error_without_parent("Public key file does not exist")
+        return error_without_parent("Public key file does not exist");
     }
     if !key_file_exists(keys_dir, profile, CryptoKey::SecretKey) {
-        return error_without_parent("Secret key file does not exist")
+        return error_without_parent("Secret key file does not exist");
     }
     Ok(())
 }
@@ -112,7 +117,7 @@ pub fn keypair_exists(keys_dir: &String, profile: &String) -> Result<(), AnyErro
 fn create_keypair(keys_dir: &String, profile: &String) -> Result<(PublicKey, SecretKey), AnyError> {
     match create_keys_dir_if_not_exists(&keys_dir) {
         Ok(_) => (),
-        Err(reason) => return error("Could not create keys dir", reason),
+        Err(reason) => return error("Could not create keys directory", reason),
     };
 
     let (pk, sk) = box_::gen_keypair();
