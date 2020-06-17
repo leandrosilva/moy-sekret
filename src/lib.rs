@@ -138,19 +138,20 @@ fn create_keypair(keys_dir: &String, profile: &String) -> Result<(PublicKey, Sec
 }
 
 fn create_keys_dir_if_not_exists(keys_dir: &String) -> Result<(), AnyError> {
-    let path = Path::new(keys_dir);
-    if path.is_dir() {
+    if keys_dir_exists(keys_dir) {
         return Ok(());
     }
 
+    let path = Path::new(keys_dir);
     match fs::create_dir_all(path) {
         Ok(_) => Ok(()),
-        Err(reason) => error("Failed to create keys' directory", reason),
+        Err(reason) => error("Failed to create keys directory", reason),
     }
 }
 
 fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
     let key_file_path = Path::new(output_file_path.as_str());
+
     let mut key_file = match File::create(key_file_path) {
         Ok(file) => file,
         Err(reason) => return error("Could not create key file", reason),
@@ -164,6 +165,11 @@ fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
     };
 
     Ok(())
+}
+
+fn keys_dir_exists(keys_dir: &String) -> bool {
+    let path = Path::new(keys_dir);
+    path.is_dir()
 }
 
 fn profile_file_exists(_keys_dir: &String, _profile: &String) -> bool {

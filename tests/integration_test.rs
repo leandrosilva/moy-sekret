@@ -41,7 +41,7 @@ fn create_keys_dir() {
         Ok(_) => (),
         Err(reason) => assert!(
             false,
-            format!("Failed to create test keys' directory: {}", reason)
+            format!("Failed to create test keys directory: {}", reason)
         ),
     }
 }
@@ -92,7 +92,7 @@ fn should_not_init_due_to_permission_denied_on_keys_directory() {
             Ok(_) => assert!(false, "Should have not initiated"),
             Err(reason) => {
                 assert_eq!(
-                    "Initialization failed while creating key pair: Could not create keys directory: Failed to create keys' directory: Permission denied (os error 13)",
+                    "Initialization failed while creating key pair: Could not create keys directory: Failed to create keys directory: Permission denied (os error 13)",
                     reason.to_string()
                 );
                 match profile_exists(&keys_dir, &profile) {
