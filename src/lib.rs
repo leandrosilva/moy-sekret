@@ -86,7 +86,7 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 
 pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Result<(), AnyError> {
     if !should_override {
-        if let Ok(()) = profile_exists(profile) {
+        if profile_exists(profile) {
             return error_without_parent("Initialization failed because profile already exists");
         }
     }
@@ -137,11 +137,8 @@ pub fn decrypt(
 
 // -- Profile
 
-pub fn profile_exists(profile: &String) -> Result<(), AnyError> {
-    if !profile_file_exists(profile) {
-        return error_without_parent("Profile file does not exist");
-    }
-    Ok(())
+pub fn profile_exists(profile: &String) -> bool {
+    profile_file_exists(profile)
 }
 
 fn read_profile(profile: &String) -> Result<Profile, AnyError> {
@@ -236,14 +233,14 @@ fn expand_storage_dir(storage_dir: &String) -> Result<String, AnyError> {
 
 // -- Key pair
 
-pub fn keypair_exists(storage_dir: &String, profile: &String) -> Result<(), AnyError> {
+pub fn keypair_exists(storage_dir: &String, profile: &String) -> bool {
     if !key_file_exists(storage_dir, profile, Key::PublicKey) {
-        return error_without_parent("Public key file does not exist");
+        return false;
     }
     if !key_file_exists(storage_dir, profile, Key::SecretKey) {
-        return error_without_parent("Secret key file does not exist");
+        return false;
     }
-    Ok(())
+    true
 }
 
 fn create_keypair(

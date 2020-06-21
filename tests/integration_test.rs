@@ -71,15 +71,14 @@ fn should_init_a_profile_and_save_them_to_a_given_directory() {
         let profile = F_PROFILE.to_string();
 
         match init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
-            Ok(_) => match profile_exists(&profile) {
-                Ok(_) => assert!(true),
-                Err(reason) => assert!(
+            Ok(_) => if !profile_exists(&profile) {
+                assert!(
                     false,
                     format!(
-                        "Should exist profile {} in {} directory but: {}",
-                        &profile, &storage_dir, reason
+                        "Should exist profile {} in {} directory",
+                        &profile, &storage_dir
                     )
-                ),
+                );
             },
             Err(e) => assert!(false, format!("Should have initiated but: {}", e)),
         }
@@ -105,16 +104,15 @@ fn should_not_init_due_to_permission_denied_on_storage_directory() {
                     "Initialization failed while creating storage for files: Could not create storage directory: Permission denied (os error 13)",
                     reason.to_string()
                 );
-                match profile_exists(&profile) {
-                    Ok(_) => assert!(
+                if profile_exists(&profile) {
+                    assert!(
                         false,
                         format!(
                             "Should not exist profile {} in {} directory",
                             &profile, &storage_dir
                         )
-                    ),
-                    Err(_) => assert!(true),
-                };
+                    );
+                }
             }
         }
     })
