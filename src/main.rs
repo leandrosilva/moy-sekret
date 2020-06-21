@@ -33,7 +33,7 @@ fn main() {
                 )
                 .arg(
                     Arg::with_name("override")
-                        .about("Should it override existing profile or not")
+                        .about("Should it override existing profile and keys or not")
                         .short('o')
                         .long("override"),
                 ),
