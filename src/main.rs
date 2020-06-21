@@ -94,30 +94,32 @@ fn main() {
 
     let matches = app.get_matches_mut();
     match matches.subcommand() {
-        ("init", Some(init_matches)) => {
-            let storage_dir = init_matches.value_of("dir").unwrap().to_owned();
-            let profile = init_matches.value_of("profile").unwrap().to_owned();
-            let should_override = init_matches.is_present("override");
+        ("init", Some(sub_matches)) => {
+            let storage_dir = sub_matches.value_of("dir").unwrap().to_owned();
+            let profile = sub_matches.value_of("profile").unwrap().to_owned();
+            let should_override = sub_matches.is_present("override");
 
             match init(&storage_dir, &profile, should_override) {
                 Ok(()) => println!("Key pair created with success at {} directory", &storage_dir),
                 Err(reason) => generic_exit_with_error(reason),
             }
         }
-        ("encrypt", Some(encrypt_matches)) => {
-            let file_path = encrypt_matches.value_of("file").unwrap().to_owned();
-            let should_override = encrypt_matches.is_present("override");
+        ("encrypt", Some(sub_matches)) => {
+            let profile = sub_matches.value_of("profile").unwrap().to_owned();
+            let file_path = sub_matches.value_of("file").unwrap().to_owned();
+            let should_override = sub_matches.is_present("override");
 
-            match encrypt(&file_path, should_override) {
+            match encrypt(&profile, &file_path, should_override) {
                 Ok(()) => println!("Encryption succesfully done"),
                 Err(reason) => generic_exit_with_error(reason),
             }
         }
-        ("decrypt", Some(decrypt_matches)) => {
-            let file_path = decrypt_matches.value_of("file").unwrap().to_owned();
-            let should_override = decrypt_matches.is_present("override");
+        ("decrypt", Some(sub_matches)) => {
+            let profile = sub_matches.value_of("profile").unwrap().to_owned();
+            let file_path = sub_matches.value_of("file").unwrap().to_owned();
+            let should_override = sub_matches.is_present("override");
 
-            match decrypt(&file_path, should_override) {
+            match decrypt(&profile, &file_path, should_override) {
                 Ok(()) => println!("Decryption succesfully done"),
                 Err(reason) => generic_exit_with_error(reason),
             }

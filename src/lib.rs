@@ -106,11 +106,11 @@ pub fn init(storage_dir: &String, profile: &String, should_override: bool) -> Re
     Ok(())
 }
 
-pub fn encrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyError> {
+pub fn encrypt(_profile: &String, _file_path: &String, _should_override: bool) -> Result<(), AnyError> {
     error_without_parent("Not implemented yet")
 }
 
-pub fn decrypt(_file_path: &String, _should_override: bool) -> Result<(), AnyError> {
+pub fn decrypt(_profile: &String, _file_path: &String, _should_override: bool) -> Result<(), AnyError> {
     error_without_parent("Not implemented yet")
 }
 
