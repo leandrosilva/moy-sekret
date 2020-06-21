@@ -95,11 +95,11 @@ fn main() {
     let matches = app.get_matches_mut();
     match matches.subcommand() {
         ("init", Some(sub_matches)) => {
-            let storage_dir = sub_matches.value_of("dir").unwrap().to_owned();
             let profile = sub_matches.value_of("profile").unwrap().to_owned();
+            let storage_dir = sub_matches.value_of("dir").unwrap().to_owned();
             let should_override = sub_matches.is_present("override");
 
-            match init(&storage_dir, &profile, should_override) {
+            match init(&profile, &storage_dir, should_override) {
                 Ok(()) => println!("Key pair created with success at {} directory", &storage_dir),
                 Err(reason) => generic_exit_with_error(reason),
             }
