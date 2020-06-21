@@ -103,12 +103,12 @@ pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Re
 
     let abs_storage_dir = expand_storage_dir(storage_dir)?;
 
-    match create_profile(&abs_storage_dir, profile) {
+    match create_profile(profile, &abs_storage_dir) {
         Ok(_) => (),
         Err(reason) => return error("Initialization failed while creating profile", reason),
     };
 
-    match create_keypair(&abs_storage_dir, &profile) {
+    match create_keypair(&profile, &abs_storage_dir) {
         Ok(_) => (),
         Err(reason) => return error("Initialization failed while creating key pair", reason),
     }
@@ -141,11 +141,7 @@ pub fn profile_exists(profile: &String) -> Result<(), AnyError> {
     if !profile_file_exists(profile) {
         return error_without_parent("Profile file does not exist");
     }
-
-    let profile_obj = read_profile(profile)?;
-    let storage_dir = profile_obj.storage;
-
-    keypair_exists(&storage_dir, profile)
+    Ok(())
 }
 
 fn read_profile(profile: &String) -> Result<Profile, AnyError> {
@@ -162,7 +158,7 @@ fn read_profile(profile: &String) -> Result<Profile, AnyError> {
     }
 }
 
-fn create_profile(storage_dir: &String, profile: &String) -> Result<(), AnyError> {
+fn create_profile(profile: &String, storage_dir: &String) -> Result<(), AnyError> {
     let profile_obj = Profile {
         name: profile.to_owned(),
         storage: storage_dir.to_owned(),
@@ -251,18 +247,18 @@ pub fn keypair_exists(storage_dir: &String, profile: &String) -> Result<(), AnyE
 }
 
 fn create_keypair(
-    storage_dir: &String,
     profile: &String,
+    storage_dir: &String,
 ) -> Result<(PublicKey, SecretKey), AnyError> {
     let (pk, sk) = box_::gen_keypair();
 
-    let pk_file_path = get_key_file_name(storage_dir, profile, Key::PublicKey);
+    let pk_file_path = get_key_file_name(profile, storage_dir, Key::PublicKey);
     match save_key(pk.as_ref(), &pk_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save public key file", reason),
     };
 
-    let sk_file_path = get_key_file_name(storage_dir, profile, Key::SecretKey);
+    let sk_file_path = get_key_file_name(profile, storage_dir, Key::SecretKey);
     match save_key(sk.as_ref(), &sk_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save secret key file", reason),
@@ -289,12 +285,12 @@ fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
     Ok(())
 }
 
-fn get_key_file_name(storage_dir: &String, profile: &String, key: Key) -> String {
+fn get_key_file_name(profile: &String, storage_dir: &String, key: Key) -> String {
     format!("{}/{}.{}", storage_dir, profile, key)
 }
 
-fn key_file_exists(storage_dir: &String, profile: &String, key: Key) -> bool {
-    let file_path = get_key_file_name(storage_dir, profile, key);
+fn key_file_exists(profile: &String, storage_dir: &String, key: Key) -> bool {
+    let file_path = get_key_file_name(profile, storage_dir, key);
     let file = Path::new(file_path.as_str());
     file.is_file()
 }
