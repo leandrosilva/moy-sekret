@@ -37,6 +37,8 @@ impl fmt::Display for Key {
     }
 }
 
+pub type Keypar = (PublicKey, SecretKey);
+
 // Custom error types
 //
 
@@ -86,7 +88,7 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 
 pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Result<(), AnyError> {
     if !should_override {
-        if profile_exists(profile) {
+        if profile_exists(&profile) {
             return error_without_parent("Initialization failed because profile already exists");
         }
     }
@@ -101,9 +103,9 @@ pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Re
         }
     };
 
-    let abs_storage_dir = expand_storage_dir(storage_dir)?;
+    let abs_storage_dir = expand_storage_dir(&storage_dir)?;
 
-    match create_profile(profile, &abs_storage_dir) {
+    match create_profile(&profile, &abs_storage_dir) {
         Ok(_) => (),
         Err(reason) => return error("Initialization failed while creating profile", reason),
     };
@@ -117,11 +119,28 @@ pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Re
 }
 
 pub fn encrypt(
-    _profile: &String,
-    _file_path: &String,
-    _should_override: bool,
+    profile: &String,
+    file_path: &String,
+    should_override: bool,
 ) -> Result<(), AnyError> {
-    error_without_parent("Not implemented yet")
+    let profile_obj = match read_profile(&profile) {
+        Ok(obj) => obj,
+        Err(reason) => return error("Encryption failed while reading user profile", reason),
+    };
+
+    let encrypted_file_path = get_encrypted_file_name(&profile_obj.storage, &file_path);
+    if !should_override {
+        if file_exists(&encrypted_file_path) {
+            return error_without_parent("Encryption failed because cipher file already exists");
+        }
+    }
+
+    match encrypt_file(&profile_obj, &file_path, &encrypted_file_path) {
+        Ok(_) => (),
+        Err(reason) => return error("Encryption failed while doing actual encryption", reason),
+    };
+
+    Ok(())
 }
 
 pub fn decrypt(
@@ -233,20 +252,24 @@ fn expand_storage_dir(storage_dir: &String) -> Result<String, AnyError> {
 
 // -- Key pair
 
-pub fn keypair_exists(storage_dir: &String, profile: &String) -> bool {
-    if !key_file_exists(storage_dir, profile, Key::PublicKey) {
+pub fn keypair_exists(profile: &String, storage_dir: &String) -> bool {
+    if !key_file_exists(profile, storage_dir, Key::PublicKey) {
         return false;
     }
-    if !key_file_exists(storage_dir, profile, Key::SecretKey) {
+    if !key_file_exists(profile, storage_dir, Key::SecretKey) {
         return false;
     }
     true
 }
 
+fn read_keypair(profile: &String, storage_dir: &String) -> Result<Keypar, AnyError> {
+    error_without_parent("Not implemented yet")
+}
+
 fn create_keypair(
     profile: &String,
     storage_dir: &String,
-) -> Result<(PublicKey, SecretKey), AnyError> {
+) -> Result<Keypar, AnyError> {
     let (pk, sk) = box_::gen_keypair();
 
     let pk_file_path = get_key_file_name(profile, storage_dir, Key::PublicKey);
@@ -292,8 +315,24 @@ fn key_file_exists(profile: &String, storage_dir: &String, key: Key) -> bool {
     file.is_file()
 }
 
+// -- Encryption
+
+fn encrypt_file(
+    profile_obj: &Profile,
+    file_path: &String,
+    encrypted_file_path: &String,
+) -> Result<(), AnyError> {
+    error_without_parent("Not implemented yet")
+}
+
+fn get_encrypted_file_name(storage_dir: &String, file_name: &String) -> String {
+    format!("{}/{}.cipher", storage_dir, file_name)
+}
+
 // Helper functions
 //
+
+// -- Process
 
 pub fn exit_normal(message: &str) {
     println!("{}", message);
@@ -303,6 +342,13 @@ pub fn exit_normal(message: &str) {
 pub fn exit_with_error(message: &str, reason: AnyError) {
     eprintln!("{}: {}", message, reason);
     process::exit(666);
+}
+
+// -- File
+
+fn file_exists(file_path: &String) -> bool {
+    let path = Path::new(file_path.as_str());
+    path.is_file()
 }
 
 // Unit tests

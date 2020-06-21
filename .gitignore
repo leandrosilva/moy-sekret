@@ -1,2 +1,5 @@
 /target
-/storage
+
+moy-sekret.*.toml
+*.pk
+*.sk
