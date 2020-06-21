@@ -298,6 +298,11 @@ fn key_file_exists(profile: &String, storage_dir: &String, key: Key) -> bool {
 // Helper functions
 //
 
+pub fn exit_normal(message: &str) {
+    println!("{}", message);
+    process::exit(0);
+}
+
 pub fn exit_with_error(message: &str, reason: AnyError) {
     eprintln!("{}: {}", message, reason);
     process::exit(666);

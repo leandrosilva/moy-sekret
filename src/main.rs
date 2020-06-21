@@ -1,5 +1,7 @@
 use clap::{App, Arg};
-use moy_sekret::{decrypt, encrypt, exit_with_error, init, AnyError};
+use console::Style;
+use dialoguer::Confirm;
+use moy_sekret::{decrypt, encrypt, exit_normal, exit_with_error, init, AnyError};
 
 // Main
 //
@@ -95,12 +97,33 @@ fn main() {
     let matches = app.get_matches_mut();
     match matches.subcommand() {
         ("init", Some(sub_matches)) => {
+            let should_override = sub_matches.is_present("override");
+            if should_override {
+                let red_alert = Style::new().red();
+                println!(
+                    concat!(
+                        "This operation will {} any key you have got with this profile.\n",
+                        "This is {} and you may loose access to any file you have encrypted with those keys."
+                    ),
+                    red_alert.apply_to("override"),
+                    red_alert.apply_to("unrecoverable")
+                );
+                let confirm = Confirm::new()
+                    .with_prompt("Are you sure about that?")
+                    .interact();
+                if let Ok(false) = confirm {
+                    exit_normal("Okay. Save move.");
+                }
+            }
+
             let profile = sub_matches.value_of("profile").unwrap().to_owned();
             let storage_dir = sub_matches.value_of("dir").unwrap().to_owned();
-            let should_override = sub_matches.is_present("override");
 
             match init(&profile, &storage_dir, should_override) {
-                Ok(()) => println!("Key pair created with success at {} directory", &storage_dir),
+                Ok(()) => println!(
+                    "Key pair created with success at {} directory",
+                    &storage_dir
+                ),
                 Err(reason) => generic_exit_with_error(reason),
             }
         }
