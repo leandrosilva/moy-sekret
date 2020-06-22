@@ -86,9 +86,9 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 // Entrypoint functions
 //
 
-pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Result<(), AnyError> {
+pub fn init(profile_name: &String, storage_dir: &String, should_override: bool) -> Result<(), AnyError> {
     if !should_override {
-        if profile_exists(&profile) {
+        if profile_exists(&profile_name) {
             return error_without_parent("Initialization failed because profile already exists");
         }
     }
@@ -105,12 +105,12 @@ pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Re
 
     let abs_storage_dir = expand_storage_dir(&storage_dir)?;
 
-    match create_profile(&profile, &abs_storage_dir) {
-        Ok(_) => (),
+    let profile = match create_profile(&profile_name, &abs_storage_dir) {
+        Ok(obj) => obj,
         Err(reason) => return error("Initialization failed while creating profile", reason),
     };
 
-    match create_keypair(&profile, &abs_storage_dir) {
+    match create_keypair(&profile) {
         Ok(_) => (),
         Err(reason) => return error("Initialization failed while creating key pair", reason),
     }
@@ -119,23 +119,23 @@ pub fn init(profile: &String, storage_dir: &String, should_override: bool) -> Re
 }
 
 pub fn encrypt(
-    profile: &String,
+    profile_name: &String,
     file_path: &String,
     should_override: bool,
 ) -> Result<(), AnyError> {
-    let profile_obj = match read_profile(&profile) {
+    let profile = match read_profile(&profile_name) {
         Ok(obj) => obj,
         Err(reason) => return error("Encryption failed while reading user profile", reason),
     };
 
-    let encrypted_file_path = get_encrypted_file_name(&profile_obj.storage, &file_path);
+    let encrypted_file_path = get_encrypted_file_name(&profile.storage, &file_path);
     if !should_override {
         if file_exists(&encrypted_file_path) {
             return error_without_parent("Encryption failed because cipher file already exists");
         }
     }
 
-    match encrypt_file(&profile_obj, &file_path, &encrypted_file_path) {
+    match encrypt_file(&profile, &file_path, &encrypted_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Encryption failed while doing actual encryption", reason),
     };
@@ -144,7 +144,7 @@ pub fn encrypt(
 }
 
 pub fn decrypt(
-    _profile: &String,
+    _profile_name: &String,
     _file_path: &String,
     _should_override: bool,
 ) -> Result<(), AnyError> {
@@ -156,17 +156,17 @@ pub fn decrypt(
 
 // -- Profile
 
-pub fn profile_exists(profile: &String) -> bool {
-    profile_file_exists(profile)
+pub fn profile_exists(profile_name: &String) -> bool {
+    profile_file_exists(profile_name)
 }
 
-fn read_profile(profile: &String) -> Result<Profile, AnyError> {
-    let file_name = get_profile_file_name(profile);
+fn read_profile(profile_name: &String) -> Result<Profile, AnyError> {
+    let file_name = get_profile_file_name(&profile_name);
     match fs::read_to_string(file_name) {
         Ok(content) => {
             let result = toml::from_str(content.as_str());
             match result {
-                Ok(profile_obj) => Ok(profile_obj),
+                Ok(profile) => Ok(profile),
                 Err(reason) => error("Could not parse profile file", reason),
             }
         }
@@ -174,22 +174,22 @@ fn read_profile(profile: &String) -> Result<Profile, AnyError> {
     }
 }
 
-fn create_profile(profile: &String, storage_dir: &String) -> Result<(), AnyError> {
-    let profile_obj = Profile {
-        name: profile.to_owned(),
+fn create_profile(profile_name: &String, storage_dir: &String) -> Result<Profile, AnyError> {
+    let profile = Profile {
+        name: profile_name.to_owned(),
         storage: storage_dir.to_owned(),
     };
 
-    let profile_file_path = get_profile_file_name(profile);
-    match save_profile(&profile_obj, &profile_file_path) {
+    let profile_file_path = get_profile_file_name(&profile_name);
+    match save_profile(&profile, &profile_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save profile", reason),
     };
 
-    Ok(())
+    Ok(profile)
 }
 
-fn save_profile(profile_obj: &Profile, output_file_path: &String) -> Result<(), AnyError> {
+fn save_profile(profile: &Profile, output_file_path: &String) -> Result<(), AnyError> {
     let profile_file_path = Path::new(output_file_path.as_str());
 
     let mut key_file = match File::create(profile_file_path) {
@@ -197,7 +197,7 @@ fn save_profile(profile_obj: &Profile, output_file_path: &String) -> Result<(), 
         Err(reason) => return error("Could not create profile file", reason),
     };
 
-    let profile_ser = toml::to_string(&profile_obj).unwrap();
+    let profile_ser = toml::to_string(&profile).unwrap();
 
     match key_file.write_all(profile_ser.as_bytes()) {
         Ok(_) => (),
@@ -207,15 +207,15 @@ fn save_profile(profile_obj: &Profile, output_file_path: &String) -> Result<(), 
     Ok(())
 }
 
-fn get_profile_file_name(profile: &String) -> String {
+fn get_profile_file_name(profile_name: &String) -> String {
     match dirs::home_dir() {
-        Some(path) => format!("{}/.moy-sekret.{}.toml", path.display(), profile),
-        None => format!(".moy-sekret.{}.toml", profile),
+        Some(path) => format!("{}/.moy-sekret.{}.toml", path.display(), profile_name),
+        None => format!(".moy-sekret.{}.toml", profile_name),
     }
 }
 
-fn profile_file_exists(profile: &String) -> bool {
-    let file_path = get_profile_file_name(profile);
+fn profile_file_exists(profile_name: &String) -> bool {
+    let file_path = get_profile_file_name(&profile_name);
     let file = Path::new(file_path.as_str());
     file.is_file()
 }
@@ -252,33 +252,58 @@ fn expand_storage_dir(storage_dir: &String) -> Result<String, AnyError> {
 
 // -- Key pair
 
-pub fn keypair_exists(profile: &String, storage_dir: &String) -> bool {
-    if !key_file_exists(profile, storage_dir, Key::PublicKey) {
+pub fn keypair_exists(profile: &Profile) -> bool {
+    if !key_file_exists(&profile, Key::PublicKey) {
         return false;
     }
-    if !key_file_exists(profile, storage_dir, Key::SecretKey) {
+    if !key_file_exists(&profile, Key::SecretKey) {
         return false;
     }
     true
 }
 
-fn read_keypair(profile: &String, storage_dir: &String) -> Result<Keypar, AnyError> {
-    error_without_parent("Not implemented yet")
+fn read_keypair(profile: &Profile) -> Result<Keypar, AnyError> {
+    let pk_file_path = get_key_file_name(&profile, Key::PublicKey);
+    let pk = match read_key(&pk_file_path) {
+        Ok(raw) => match PublicKey::from_slice(raw.as_ref()) {
+            Some(pk_obj) => pk_obj,
+            None => return error_without_parent("Could not decode public key"),
+        },
+        Err(reason) => return error("Could not read public key", reason),
+    };
+
+    let sk_file_path = get_key_file_name(&profile, Key::SecretKey);
+    let sk = match read_key(&sk_file_path) {
+        Ok(raw) => match SecretKey::from_slice(raw.as_ref()) {
+            Some(sk_obj) => sk_obj,
+            None => return error_without_parent("Could not decode secret key"),
+        },
+        Err(reason) => return error("Could not read public key", reason),
+    };
+    Ok((pk, sk))
 }
 
-fn create_keypair(
-    profile: &String,
-    storage_dir: &String,
-) -> Result<Keypar, AnyError> {
+fn read_key(input_file_path: &String) -> Result<Vec<u8>, AnyError> {
+    let key_file_path = Path::new(input_file_path.as_str());
+    match fs::read_to_string(key_file_path) {
+        Ok(raw_base64) => match BASE64.decode(raw_base64.as_bytes()) {
+            Ok(raw_vec) => Ok(raw_vec),
+            Err(reason) => error("Could not decode key file", reason),
+        },
+        Err(reason) => error("Could not read key file", reason),
+    }
+}
+
+fn create_keypair(profile: &Profile) -> Result<Keypar, AnyError> {
     let (pk, sk) = box_::gen_keypair();
 
-    let pk_file_path = get_key_file_name(profile, storage_dir, Key::PublicKey);
+    let pk_file_path = get_key_file_name(&profile, Key::PublicKey);
     match save_key(pk.as_ref(), &pk_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save public key file", reason),
     };
 
-    let sk_file_path = get_key_file_name(profile, storage_dir, Key::SecretKey);
+    let sk_file_path = get_key_file_name(&profile, Key::SecretKey);
     match save_key(sk.as_ref(), &sk_file_path) {
         Ok(_) => (),
         Err(reason) => return error("Could not save secret key file", reason),
@@ -305,12 +330,12 @@ fn save_key(key: &[u8], output_file_path: &String) -> Result<(), AnyError> {
     Ok(())
 }
 
-fn get_key_file_name(profile: &String, storage_dir: &String, key: Key) -> String {
-    format!("{}/{}.{}", storage_dir, profile, key)
+fn get_key_file_name(profile: &Profile, key: Key) -> String {
+    format!("{}/{}.{}", profile.storage, profile.name, key)
 }
 
-fn key_file_exists(profile: &String, storage_dir: &String, key: Key) -> bool {
-    let file_path = get_key_file_name(profile, storage_dir, key);
+fn key_file_exists(profile: &Profile, key: Key) -> bool {
+    let file_path = get_key_file_name(&profile, key);
     let file = Path::new(file_path.as_str());
     file.is_file()
 }
@@ -318,10 +343,14 @@ fn key_file_exists(profile: &String, storage_dir: &String, key: Key) -> bool {
 // -- Encryption
 
 fn encrypt_file(
-    profile_obj: &Profile,
+    profile: &Profile,
     file_path: &String,
     encrypted_file_path: &String,
 ) -> Result<(), AnyError> {
+    let (pk, sk) = match read_keypair(&profile) {
+        Ok(keypair) => keypair,
+        Err(reason) => return error("Could not encrypt file", reason),
+    };
     error_without_parent("Not implemented yet")
 }
 
