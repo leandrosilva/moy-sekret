@@ -86,7 +86,11 @@ pub fn error_without_parent<T>(message: &str) -> Result<T, AnyError> {
 // Entrypoint functions
 //
 
-pub fn init(profile_name: &String, storage_dir: &String, should_override: bool) -> Result<(), AnyError> {
+pub fn init(
+    profile_name: &String,
+    storage_dir: &String,
+    should_override: bool,
+) -> Result<(), AnyError> {
     if !should_override {
         if profile_exists(&profile_name) {
             return error_without_parent("Initialization failed because profile already exists");
