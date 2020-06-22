@@ -2,6 +2,7 @@ use data_encoding::BASE64;
 use dirs;
 use serde::{Deserialize, Serialize};
 use sodiumoxide::crypto::box_;
+use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305::Nonce;
 use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305::PublicKey;
 use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305::SecretKey;
 use std::error::Error;
@@ -132,14 +133,14 @@ pub fn encrypt(
         Err(reason) => return error("Encryption failed while reading user profile", reason),
     };
 
-    let encrypted_file_path = get_encrypted_file_name(&profile.storage, &file_path);
+    let encrypted_file_path = get_encrypted_file_name(&profile, &file_path);
     if !should_override {
         if file_exists(&encrypted_file_path) {
             return error_without_parent("Encryption failed because cipher file already exists");
         }
     }
 
-    match encrypt_file(&profile, &file_path, &encrypted_file_path) {
+    match encrypt_file(&profile, &file_path) {
         Ok(_) => (),
         Err(reason) => return error("Encryption failed while doing actual encryption", reason),
     };
@@ -346,20 +347,73 @@ fn key_file_exists(profile: &Profile, key: Key) -> bool {
 
 // -- Encryption
 
-fn encrypt_file(
-    profile: &Profile,
-    file_path: &String,
-    encrypted_file_path: &String,
-) -> Result<(), AnyError> {
+fn encrypt_file(profile: &Profile, file_path: &String) -> Result<(), AnyError> {
     let (pk, sk) = match read_keypair(&profile) {
         Ok(keypair) => keypair,
         Err(reason) => return error("Could not encrypt file", reason),
     };
-    error_without_parent("Not implemented yet")
+
+    let plain_content = match fs::read(file_path) {
+        Ok(raw_vec) => raw_vec,
+        Err(reason) => return error("Could not read file to encrypt", reason),
+    };
+
+    let nonce = box_::gen_nonce();
+    let cipher_content = box_::seal(plain_content.as_ref(), &nonce, &pk, &sk);
+
+    let cipher_file_path = get_encrypted_file_name(&profile, &file_path);
+    match save_encrypted_file(&cipher_content, &cipher_file_path) {
+        Ok(_) => (),
+        Err(reason) => return error("Could not save encrypted file", reason),
+    };
+
+    let nonce_file_path = get_nonce_file_name(&profile, &file_path);
+    match save_nonce_file(&nonce, &nonce_file_path) {
+        Ok(_) => (),
+        Err(reason) => return error("Could not save sauce file", reason),
+    };
+
+    Ok(())
 }
 
-fn get_encrypted_file_name(storage_dir: &String, file_name: &String) -> String {
-    format!("{}/{}.cipher", storage_dir, file_name)
+fn save_encrypted_file(cipher_content: &[u8], output_file_path: &String) -> Result<(), AnyError> {
+    let cipher_file_path = Path::new(output_file_path);
+
+    let mut cipher_file = match File::create(cipher_file_path) {
+        Ok(file) => file,
+        Err(reason) => return error("Could not create encrypted file", reason),
+    };
+
+    match cipher_file.write_all(&cipher_content) {
+        Ok(_) => Ok(()),
+        Err(reason) => error("Could not write to encrypted file", reason),
+    }
+}
+
+fn save_nonce_file(nonce: &Nonce, output_file_path: &String) -> Result<(), AnyError> {
+    let cipher_file_path = Path::new(output_file_path);
+
+    let mut cipher_file = match File::create(cipher_file_path) {
+        Ok(file) => file,
+        Err(reason) => return error("Could not create sauce file", reason),
+    };
+
+    match cipher_file.write_all(nonce.as_ref()) {
+        Ok(_) => Ok(()),
+        Err(reason) => error("Could not write to sauce file", reason),
+    }
+}
+
+fn get_encrypted_file_name(profile: &Profile, file_name: &String) -> String {
+    let path = Path::new(file_name);
+    let name = path.file_name().unwrap();
+    format!("{}/{}.c", profile.storage, name.to_str().unwrap())
+}
+
+fn get_nonce_file_name(profile: &Profile, file_name: &String) -> String {
+    let path = Path::new(file_name);
+    let name = path.file_name().unwrap();
+    format!("{}/{}.s", profile.storage, name.to_str().unwrap())
 }
 
 // Helper functions

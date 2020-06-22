@@ -103,7 +103,7 @@ fn main() {
                 println!(
                     concat!(
                         "This operation will {} any key you have got with this profile.\n",
-                        "This is {} and you may loose access to any file you have encrypted with those keys."
+                        "This is {} and you may lose access to any file you have encrypted with those keys."
                     ),
                     red_alert.apply_to("override"),
                     red_alert.apply_to("unrecoverable")

@@ -3,3 +3,5 @@
 moy-sekret.*.toml
 *.pk
 *.sk
+*.c
+*.s
