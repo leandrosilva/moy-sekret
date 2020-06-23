@@ -40,6 +40,12 @@ impl fmt::Display for Key {
 
 pub type Keypar = (PublicKey, SecretKey);
 
+#[derive(Serialize, Deserialize, Debug)]
+struct Cipher {
+    nonce: Nonce,
+    data: Vec<u8>,
+}
+
 // Custom error types
 //
 
@@ -359,24 +365,23 @@ fn encrypt_file(profile: &Profile, file_path: &String) -> Result<(), AnyError> {
     };
 
     let nonce = box_::gen_nonce();
-    let cipher_content = box_::seal(plain_content.as_ref(), &nonce, &pk, &sk);
+    let cipher_data = box_::seal(plain_content.as_ref(), &nonce, &pk, &sk);
 
     let cipher_file_path = get_encrypted_file_name(&profile, &file_path);
-    match save_encrypted_file(&cipher_content, &cipher_file_path) {
-        Ok(_) => (),
-        Err(reason) => return error("Could not save encrypted file", reason),
+    let cipher = Cipher {
+        nonce: nonce,
+        data: cipher_data,
     };
 
-    let nonce_file_path = get_nonce_file_name(&profile, &file_path);
-    match save_nonce_file(&nonce, &nonce_file_path) {
+    match save_encrypted_file(&cipher, &cipher_file_path) {
         Ok(_) => (),
-        Err(reason) => return error("Could not save sauce file", reason),
+        Err(reason) => return error("Could not save encrypted file", reason),
     };
 
     Ok(())
 }
 
-fn save_encrypted_file(cipher_content: &[u8], output_file_path: &String) -> Result<(), AnyError> {
+fn save_encrypted_file(cipher: &Cipher, output_file_path: &String) -> Result<(), AnyError> {
     let cipher_file_path = Path::new(output_file_path);
 
     let mut cipher_file = match File::create(cipher_file_path) {
@@ -384,36 +389,23 @@ fn save_encrypted_file(cipher_content: &[u8], output_file_path: &String) -> Resu
         Err(reason) => return error("Could not create encrypted file", reason),
     };
 
-    match cipher_file.write_all(&cipher_content) {
-        Ok(_) => Ok(()),
-        Err(reason) => error("Could not write to encrypted file", reason),
-    }
-}
-
-fn save_nonce_file(nonce: &Nonce, output_file_path: &String) -> Result<(), AnyError> {
-    let cipher_file_path = Path::new(output_file_path);
-
-    let mut cipher_file = match File::create(cipher_file_path) {
-        Ok(file) => file,
-        Err(reason) => return error("Could not create sauce file", reason),
+    let cipher_data = match bincode::serialize(cipher) {
+        Ok(data) => data,
+        Err(reason) => return error("Could not serialize encrypted data", reason),
     };
 
-    match cipher_file.write_all(nonce.as_ref()) {
-        Ok(_) => Ok(()),
-        Err(reason) => error("Could not write to sauce file", reason),
-    }
+    match cipher_file.write_all(&cipher_data) {
+        Ok(_) => (),
+        Err(reason) => return error("Could not write to encrypted file", reason),
+    };
+
+    Ok(())
 }
 
 fn get_encrypted_file_name(profile: &Profile, file_name: &String) -> String {
     let path = Path::new(file_name);
     let name = path.file_name().unwrap();
-    format!("{}/{}.c", profile.storage, name.to_str().unwrap())
-}
-
-fn get_nonce_file_name(profile: &Profile, file_name: &String) -> String {
-    let path = Path::new(file_name);
-    let name = path.file_name().unwrap();
-    format!("{}/{}.s", profile.storage, name.to_str().unwrap())
+    format!("{}/{}.cz", profile.storage, name.to_str().unwrap())
 }
 
 // Helper functions
