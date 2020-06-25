@@ -134,6 +134,16 @@ pub fn encrypt(
     file_path: &String,
     should_override: bool,
 ) -> Result<(), AnyError> {
+    if file_path.ends_with(".cz") {
+        return error_without_parent(
+            "Encryption failed because source file was already encrypted by this program (.cz)",
+        );
+    }
+
+    if !file_exists(&file_path) {
+        return error_without_parent("Encryption failed because source file does not exists");
+    }
+
     let profile = match read_profile(&profile_name) {
         Ok(obj) => obj,
         Err(reason) => return error("Encryption failed while reading user profile", reason),
@@ -142,7 +152,7 @@ pub fn encrypt(
     let encrypted_file_path = get_encrypted_file_name(&profile, &file_path);
     if !should_override {
         if file_exists(&encrypted_file_path) {
-            return error_without_parent("Encryption failed because cipher file already exists");
+            return error_without_parent("Encryption failed because target file already exists");
         }
     }
 
@@ -155,11 +165,39 @@ pub fn encrypt(
 }
 
 pub fn decrypt(
-    _profile_name: &String,
-    _file_path: &String,
-    _should_override: bool,
+    profile_name: &String,
+    file_path: &String,
+    dest_dir: &String,
+    should_override: bool,
 ) -> Result<(), AnyError> {
-    error_without_parent("Not implemented yet")
+    if !file_path.ends_with(".cz") {
+        return error_without_parent(
+            "Decryption failed because source file was not made by this program (.cz)",
+        );
+    }
+
+    if !file_exists(&file_path) {
+        return error_without_parent("Decryption failed because source file does not exists");
+    }
+
+    let decrypted_file_path = get_decrypted_file_name(&file_path, &dest_dir);
+    if !should_override {
+        if file_exists(&decrypted_file_path) {
+            return error_without_parent("Decryption failed because target file already exists");
+        }
+    }
+
+    let profile = match read_profile(&profile_name) {
+        Ok(obj) => obj,
+        Err(reason) => return error("Decryption failed while reading user profile", reason),
+    };
+
+    match decrypt_file(&profile, &file_path, &dest_dir) {
+        Ok(_) => (),
+        Err(reason) => return error("Decryption failed while doing actual decryption", reason),
+    };
+
+    Ok(())
 }
 
 // Business functions
@@ -408,6 +446,64 @@ fn get_encrypted_file_name(profile: &Profile, file_name: &String) -> String {
     format!("{}/{}.cz", profile.storage, name.to_str().unwrap())
 }
 
+// -- Decryption
+
+// -- Encryption
+
+fn decrypt_file(profile: &Profile, file_path: &String, dest_dir: &String) -> Result<(), AnyError> {
+    let (pk, sk) = match read_keypair(&profile) {
+        Ok(keypair) => keypair,
+        Err(reason) => return error("Could not encrypt file", reason),
+    };
+
+    let cipher_content = match fs::read(file_path) {
+        Ok(raw_vec) => raw_vec,
+        Err(reason) => return error("Could not read file to decrypt", reason),
+    };
+
+    let cipher: Cipher = match bincode::deserialize(&cipher_content) {
+        Ok(data) => data,
+        Err(reason) => return error("Could not deserialize encrypted data", reason),
+    };
+
+    let plain_data = match box_::open(cipher.data.as_ref(), &cipher.nonce, &pk, &sk) {
+        Ok(data) => data,
+        Err(_) => return error_without_parent("Could not decrypt file"),
+    };
+
+    let plain_file_path = get_decrypted_file_name(&file_path, &dest_dir);
+    match save_decrypted_file(&plain_data, &plain_file_path) {
+        Ok(_) => (),
+        Err(reason) => return error("Could not save decrypted file", reason),
+    };
+
+    Ok(())
+}
+
+fn save_decrypted_file(plain_data: &[u8], output_file_path: &String) -> Result<(), AnyError> {
+    let plain_file_path = Path::new(output_file_path);
+
+    create_dir_if_not_exists(&format!("{}", plain_file_path.parent().unwrap().display()))?;
+
+    let mut plain_file = match File::create(plain_file_path) {
+        Ok(file) => file,
+        Err(reason) => return error("Could not create plain file", reason),
+    };
+
+    match plain_file.write_all(&plain_data) {
+        Ok(_) => (),
+        Err(reason) => return error("Could not write to plain file", reason),
+    };
+
+    Ok(())
+}
+
+fn get_decrypted_file_name(file_name: &String, dest_dir: &String) -> String {
+    let path = Path::new(file_name);
+    let name = path.file_stem().unwrap();
+    format!("{}/{}", dest_dir, name.to_str().unwrap())
+}
+
 // Helper functions
 //
 
@@ -428,6 +524,17 @@ pub fn exit_with_error(message: &str, reason: AnyError) {
 fn file_exists(file_path: &String) -> bool {
     let path = Path::new(file_path.as_str());
     path.is_file()
+}
+
+fn create_dir_if_not_exists(given_dir: &String) -> Result<(), AnyError> {
+    let path = Path::new(given_dir);
+    if !path.exists() {
+        match fs::create_dir_all(path) {
+            Ok(_) => return Ok(()),
+            Err(reason) => return error("Could not create directory", reason),
+        }
+    }
+    Ok(())
 }
 
 // Unit tests

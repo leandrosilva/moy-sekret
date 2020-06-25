@@ -10,11 +10,7 @@ macro_rules! confirm_override {
     ($warning_override:expr, $warning_unrecoverable:expr) => {
         let red_alert = Style::new().red();
         println!(
-            concat!(
-                $warning_override,
-                "\n",
-                $warning_unrecoverable
-            ),
+            concat!($warning_override, "\n", $warning_unrecoverable),
             OVERRIDE = red_alert.apply_to("override"),
             UNRECOVERABLE = red_alert.apply_to("unrecoverable")
         );
@@ -50,7 +46,7 @@ fn main() {
                 )
                 .arg(
                     Arg::with_name("dir")
-                        .about("directory where to store keys and encrypted files")
+                        .about("target directory where to store keys and encrypted files")
                         .short('d')
                         .long("dir")
                         .takes_value(true)
@@ -66,13 +62,13 @@ fn main() {
         )
         .subcommand(
             App::new("encrypt")
-                .about("Encrypts a file, saves it to the repository directory and deletes the original one.")
+                .about("Encrypts a source file, saves it to the target repository directory and keeps the original one.")
                 .arg(
                     &profile_arg,
                 )
                 .arg(
                     Arg::with_name("file")
-                        .about("path to the file to be encrypted")
+                        .about("path to the source file to be encrypted")
                         .short('f')
                         .long("file")
                         .takes_value(true)
@@ -88,13 +84,13 @@ fn main() {
         )
         .subcommand(
             App::new("decrypt")
-                .about("Decrypts a file, saves it plain to given directory but keeps the encrypted one.")
+                .about("Decrypts a source file, saves it plain to a target directory and keeps the encrypted one.")
                 .arg(
                     &profile_arg,
                 )
                 .arg(
                     Arg::with_name("file")
-                        .about("name of the encrypted file")
+                        .about("path to the source file to be decrypted")
                         .short('f')
                         .long("file")
                         .takes_value(true)
@@ -103,7 +99,7 @@ fn main() {
                 )
                 .arg(
                     Arg::with_name("dest")
-                        .about("directory to where save the decrypted file")
+                        .about("target directory to where save the decrypted file")
                         .short('d')
                         .long("dest")
                         .takes_value(true)
@@ -168,8 +164,9 @@ fn main() {
 
             let profile = sub_matches.value_of("profile").unwrap().to_owned();
             let file_path = sub_matches.value_of("file").unwrap().to_owned();
+            let dest_dir = sub_matches.value_of("dest").unwrap().to_owned();
 
-            match decrypt(&profile, &file_path, should_override) {
+            match decrypt(&profile, &file_path, &dest_dir, should_override) {
                 Ok(()) => println!("Decryption succesfully done"),
                 Err(reason) => generic_exit_with_error(reason),
             }
