@@ -8,4 +8,14 @@ It is a portable, cross-compilable, installable, packageable fork of [NaCl](http
 
 Its goal is to provide all of the core operations needed to build higher-level cryptographic tools.
 
-Early, early, stage yet.
+## Status
+
+Early, early stage. Yet functional.
+
+As a prove of concept to something bigger and more elaborate than that, it works just fine. It goes through the happy paths and a few corner cases too.
+
+To work on test cases now.
+
+## Copyright
+
+Leandro Silva <<leandrodoze@gmail.com>>
