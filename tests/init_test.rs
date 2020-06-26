@@ -1,5 +1,6 @@
 extern crate moy_sekret;
 
+use serial_test::serial;
 use std::fs;
 use std::path::Path;
 
@@ -53,6 +54,7 @@ setup_run_test!(
 //
 
 #[test]
+#[serial]
 fn should_init_a_profile_and_save_them_to_a_given_directory() {
     run_test!({
         let storage_dir = F_STORAGE_DIR.to_string();
@@ -76,6 +78,7 @@ fn should_init_a_profile_and_save_them_to_a_given_directory() {
 }
 
 #[test]
+#[serial]
 fn should_not_init_due_to_permission_denied_on_storage_directory() {
     // Have to find out how to test it on Windows but not now
     if cfg!(windows) {
@@ -109,6 +112,7 @@ fn should_not_init_due_to_permission_denied_on_storage_directory() {
 }
 
 #[test]
+#[serial]
 fn should_init_when_profile_exists_and_override_flag_is_present() {
     run_test!({
         let storage_dir = F_STORAGE_DIR.to_string();
@@ -131,6 +135,7 @@ fn should_init_when_profile_exists_and_override_flag_is_present() {
 }
 
 #[test]
+#[serial]
 fn should_not_init_when_profile_exists_and_override_flag_is_not_present() {
     run_test!({
         let storage_dir = F_STORAGE_DIR.to_string();
