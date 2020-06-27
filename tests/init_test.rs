@@ -1,8 +1,8 @@
 extern crate moy_sekret;
 
-use serial_test::serial;
 use std::fs;
 use std::path::Path;
+use testaun::testaun_case;
 
 #[macro_use]
 pub mod common;
@@ -39,46 +39,43 @@ fn remove_profile_file() {
 // Test Setup
 //
 
-setup_run_test!(
-    {
-        remove_profile_file();
-        remove_storage_dir();
-    },
-    {
-        remove_profile_file();
-        remove_storage_dir();
-    }
-);
+fn testaun_before() {
+    remove_profile_file();
+    remove_storage_dir();
+}
+
+fn testaun_after() {
+    remove_profile_file();
+    remove_storage_dir();
+}
 
 // Tests
 //
 
 #[test]
-#[serial]
+#[testaun_case]
 fn should_init_a_profile_and_save_them_to_a_given_directory() {
-    run_test!({
-        let storage_dir = F_STORAGE_DIR.to_string();
-        let profile = F_PROFILE.to_string();
+    let storage_dir = F_STORAGE_DIR.to_string();
+    let profile = F_PROFILE.to_string();
 
-        match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
-            Ok(_) => {
-                if !moy_sekret::profile_exists(&profile) {
-                    assert!(
-                        false,
-                        format!(
-                            "Should exist profile {} in {} directory",
-                            &profile, &storage_dir
-                        )
-                    );
-                }
+    match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
+        Ok(_) => {
+            if !moy_sekret::profile_exists(&profile) {
+                assert!(
+                    false,
+                    format!(
+                        "Should exist profile {} in {} directory",
+                        &profile, &storage_dir
+                    )
+                );
             }
-            Err(e) => assert!(false, format!("Should have initiated but: {}", e)),
         }
-    })
+        Err(e) => assert!(false, format!("Should have initiated but: {}", e)),
+    }
 }
 
 #[test]
-#[serial]
+#[testaun_case]
 fn should_not_init_due_to_permission_denied_on_storage_directory() {
     // Have to find out how to test it on Windows but not now
     if cfg!(windows) {
@@ -86,73 +83,70 @@ fn should_not_init_due_to_permission_denied_on_storage_directory() {
         return;
     }
 
-    run_test!({
-        let storage_dir = String::from("/storage");
-        let profile = F_PROFILE.to_string();
+    let storage_dir = String::from("/storage");
+    let profile = F_PROFILE.to_string();
 
-        match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
-            Ok(_) => assert!(false, "Should have not initiated"),
-            Err(reason) => {
-                assert_eq!(
+    match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
+        Ok(_) => assert!(false, "Should have not initiated"),
+        Err(reason) => {
+            assert_eq!(
                     "Initialization failed while creating storage for files: Could not create storage directory: Permission denied (os error 13)",
                     reason.to_string()
                 );
-                if moy_sekret::profile_exists(&profile) {
-                    assert!(
-                        false,
-                        format!(
-                            "Should not exist profile {} in {} directory",
-                            &profile, &storage_dir
-                        )
-                    );
-                }
+            if moy_sekret::profile_exists(&profile) {
+                assert!(
+                    false,
+                    format!(
+                        "Should not exist profile {} in {} directory",
+                        &profile, &storage_dir
+                    )
+                );
             }
         }
-    })
+    }
 }
 
 #[test]
-#[serial]
+#[testaun_case]
 fn should_init_when_profile_exists_and_override_flag_is_present() {
-    run_test!({
-        let storage_dir = F_STORAGE_DIR.to_string();
-        let profile = F_PROFILE.to_string();
+    let storage_dir = F_STORAGE_DIR.to_string();
+    let profile = F_PROFILE.to_string();
 
-        match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
-            Ok(_) => {
-                let flag_override_profile = true;
-                match moy_sekret::init(&profile, &storage_dir, flag_override_profile) {
-                    Ok(_) => assert!(true),
-                    Err(reason) => assert_eq!(
-                        "Should have initiated and overridden existent profile but:",
-                        reason.to_string()
-                    ),
-                }
+    match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
+        Ok(_) => {
+            let flag_override_profile = true;
+            match moy_sekret::init(&profile, &storage_dir, flag_override_profile) {
+                Ok(_) => assert!(true),
+                Err(reason) => assert_eq!(
+                    "Should have initiated and overridden existent profile but:",
+                    reason.to_string()
+                ),
             }
-            Err(e) => assert!(false, format!("Should have initiated profile but: {}", e)),
         }
-    })
+        Err(e) => assert!(false, format!("Should have initiated profile but: {}", e)),
+    }
 }
 
 #[test]
-#[serial]
+#[testaun_case]
 fn should_not_init_when_profile_exists_and_override_flag_is_not_present() {
-    run_test!({
-        let storage_dir = F_STORAGE_DIR.to_string();
-        let profile = F_PROFILE.to_string();
+    let storage_dir = F_STORAGE_DIR.to_string();
+    let profile = F_PROFILE.to_string();
 
-        match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
-            Ok(_) => {
-                let flag_override_profile = false;
-                match moy_sekret::init(&profile, &storage_dir, flag_override_profile) {
-                    Ok(_) => assert!(
-                        false,
-                        "Should not initialize an existent profile when override flag is not present"
-                    ),
-                    Err(reason) => assert_eq!("Initialization failed because profile already exists", reason.to_string()),
-                }
+    match moy_sekret::init(&profile, &storage_dir, F_OVERRIDE_PROFILE) {
+        Ok(_) => {
+            let flag_override_profile = false;
+            match moy_sekret::init(&profile, &storage_dir, flag_override_profile) {
+                Ok(_) => assert!(
+                    false,
+                    "Should not initialize an existent profile when override flag is not present"
+                ),
+                Err(reason) => assert_eq!(
+                    "Initialization failed because profile already exists",
+                    reason.to_string()
+                ),
             }
-            Err(e) => assert!(false, format!("Should have initiated profile but: {}", e)),
         }
-    })
+        Err(e) => assert!(false, format!("Should have initiated profile but: {}", e)),
+    }
 }
